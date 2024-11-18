@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WooCommerce Custom Prices
  * Description: Opções de personalizações para Woocommerce.
- * Version: 1.2.10
+ * Version: 1.2.17
  * Author: Douglas Lelis
  * Text Domain: woocommerce-custom-prices
  */
@@ -162,10 +162,10 @@ function wc_custom_prices_fields_settings() {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wc_custom_prices_fields_nonce']) && wp_verify_nonce($_POST['wc_custom_prices_fields_nonce'], 'wc_custom_prices_fields')) {
         $required_fields = isset($_POST['required_fields']) ? array_map('sanitize_text_field', $_POST['required_fields']) : [];
         $custom_fields_saved = false;
-    
+
         // Salvar campos obrigatórios
         update_option('wc_custom_prices_required_fields', $required_fields);
-    
+
         if (isset($_POST['custom_fields']) && is_array($_POST['custom_fields'])) {
             $custom_fields = [];
             foreach ($_POST['custom_fields'] as $index => $field) {
@@ -176,25 +176,40 @@ function wc_custom_prices_fields_settings() {
                     ];
                 }
             }
-            // Atualiza os campos personalizados no banco de dados
             update_option('wc_custom_prices_custom_fields', $custom_fields);
             $custom_fields_saved = true;
         }
-    
-        // Exibe a mensagem de sucesso para as configurações salvas
-        if ($custom_fields_saved || isset($_POST['required_fields'])) {
-            echo '<div class="updated"><p>' . __('Configurações salvas!', 'woocommerce-custom-prices') . '</p></div>';
+
+        // Salvar página de registro
+        if (isset($_POST['registration_page'])) {
+            $registration_page = sanitize_text_field($_POST['registration_page']);
+            update_option('wc_custom_prices_registration_page', $registration_page);
         }
-    
-        // Exibe mensagem de erro caso não tenha enviado campos personalizados
-        if (!isset($_POST['custom_fields'])) {
-            echo '<div class="error"><p>' . __('Erro: Nenhum campo personalizado foi enviado.', 'woocommerce-custom-prices') . '</p></div>';
+
+        // Exibe a mensagem de sucesso
+        if ($custom_fields_saved || isset($_POST['required_fields']) || isset($_POST['registration_page'])) {
+            echo '<div class="updated"><p>' . __('Configurações salvas!', 'woocommerce-custom-prices') . '</p></div>';
         }
     }
 
     $required_fields = get_option('wc_custom_prices_required_fields', []);
     $custom_fields = get_option('wc_custom_prices_custom_fields', []);
+    $registration_page = get_option('wc_custom_prices_registration_page', '');
+    $pages = get_pages();
+
     ?>
+    <h2><?php esc_html_e('Página de Registro', 'woocommerce-custom-prices'); ?></h2>
+    <p><?php esc_html_e('Selecione a página que será usada para o cadastro de clientes.', 'woocommerce-custom-prices'); ?></p>
+    <select name="registration_page">
+        <option value=""><?php esc_html_e('Selecione uma página', 'woocommerce-custom-prices'); ?></option>
+        <?php foreach ($pages as $page) : ?>
+            <option value="<?php echo esc_attr($page->ID); ?>" <?php selected($registration_page, $page->ID); ?>>
+                <?php echo esc_html($page->post_title); ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+    <br><br>
+
     <h2><?php esc_html_e('Campos Obrigatórios', 'woocommerce-custom-prices'); ?></h2>
     <p><?php esc_html_e('Selecione os campos obrigatórios para o cadastro de clientes.', 'woocommerce-custom-prices'); ?></p>
     <ul>

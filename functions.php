@@ -261,28 +261,134 @@ function wc_custom_prices_hide_sku() {
 add_action('wp', 'wc_custom_prices_hide_sku');
 
 
-// Tornar campos obrigatórios no checkout
-function wc_custom_prices_make_fields_required($fields) {
+// Adicionar campos personalizados no cadastro
+function custom_registration_form_shortcode() {
+    if (is_user_logged_in()) {
+        return '<p>' . __('Você já está logado.', 'woocommerce') . '</p>';
+    }
+
+    // Obtenha os campos obrigatórios e personalizados do banco de dados
     $required_fields = get_option('wc_custom_prices_required_fields', []);
+    $custom_fields = get_option('wc_custom_prices_custom_fields', []);
+
+    ob_start();
+    ?>
+    <form method="post" class="woocommerce-form woocommerce-form-register register">
+
+        <?php do_action('woocommerce_register_form_start'); ?>
+
+        <!-- Adicionar campos obrigatórios -->
+        <?php foreach ($required_fields as $field) : ?>
+            <?php if ($field === 'email') continue; // Ignorar o campo email ?>
+            <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+                <label for="reg_<?php echo esc_attr($field); ?>"><?php echo ucfirst(str_replace('_', ' ', $field)); ?>&nbsp;<span class="required">*</span></label>
+                <input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="<?php echo esc_attr($field); ?>" id="reg_<?php echo esc_attr($field); ?>" value="<?php echo esc_attr(!empty($_POST[$field]) ? $_POST[$field] : ''); ?>" />
+            </p>
+        <?php endforeach; ?>
+
+        <!-- Campos padrão do WooCommerce -->
+        <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+            <label for="reg_email"><?php esc_html_e('Email', 'woocommerce'); ?>&nbsp;<span class="required">*</span></label>
+            <input type="email" class="woocommerce-Input woocommerce-Input--text input-text" name="email" id="reg_email" autocomplete="email" value="<?php echo esc_attr(!empty($_POST['email']) ? $_POST['email'] : ''); ?>" />
+        </p>
+
+        <!-- Adicionar campos personalizados -->
+        <?php foreach ($custom_fields as $field) : ?>
+            <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+                <label for="custom_<?php echo esc_attr(sanitize_text_field($field['name'])); ?>"><?php echo esc_html($field['name']); ?><?php if (!empty($field['required'])) : ?>&nbsp;<span class="required">*</span><?php endif; ?></label>
+                <input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="custom_<?php echo esc_attr(sanitize_text_field($field['name'])); ?>" id="custom_<?php echo esc_attr(sanitize_text_field($field['name'])); ?>" value="<?php echo esc_attr(!empty($_POST['custom_' . $field['name']]) ? sanitize_text_field($_POST['custom_' . $field['name']]) : ''); ?>" />
+            </p>
+        <?php endforeach; ?>
+
+        <?php do_action('woocommerce_register_form'); ?>
+
+        <p class="woocommerce-form-row form-row">
+            <?php wp_nonce_field('woocommerce-register', 'woocommerce-register-nonce'); ?>
+            <button type="submit" class="woocommerce-Button button" name="register" value="<?php esc_attr_e('Register', 'woocommerce'); ?>"><?php esc_html_e('Registrar', 'woocommerce'); ?></button>
+        </p>
+
+        <?php do_action('woocommerce_register_form_end'); ?>
+    </form>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('custom_registration_form', 'custom_registration_form_shortcode');
+
+
+add_action('woocommerce_register_post', 'validate_custom_registration_fields', 10, 3);
+function validate_custom_registration_fields($username, $email, $validation_errors) {
+    $required_fields = get_option('wc_custom_prices_required_fields', []);
+    $custom_fields = get_option('wc_custom_prices_custom_fields', []);
+
+    // Validação dos campos obrigatórios
     foreach ($required_fields as $field) {
-        if (isset($fields['billing'][$field])) {
-            $fields['billing'][$field]['required'] = true;
+        if (empty($_POST[$field]) && $field !== 'email') {
+            $validation_errors->add('required_field', sprintf(__('O campo %s é obrigatório.', 'woocommerce'), ucfirst(str_replace('_', ' ', $field))));
         }
     }
-    return $fields;
-}
-add_filter('woocommerce_checkout_fields', 'wc_custom_prices_make_fields_required');
 
-// Adicionar campos personalizados no checkout
-function wc_custom_prices_add_custom_fields($fields) {
-    $custom_fields = get_option('wc_custom_prices_custom_fields', []);
+    // Validação dos campos personalizados
     foreach ($custom_fields as $field) {
-        $fields['billing'][$field['name']] = [
-            'label' => ucfirst(str_replace('_', ' ', $field['name'])),
-            'required' => $field['required'],
-            'class' => ['form-row-wide'],
-        ];
+        if (!empty($field['required']) && empty($_POST['custom_' . $field['name']])) {
+            $validation_errors->add('required_custom_field', sprintf(__('O campo %s é obrigatório.', 'woocommerce'), $field['name']));
+        }
     }
-    return $fields;
 }
-add_filter('woocommerce_checkout_fields', 'wc_custom_prices_add_custom_fields');
+
+
+function add_register_link_to_my_account() {
+    if (!is_user_logged_in()) {
+        $registration_page_id = get_option('wc_custom_prices_registration_page', '');
+        if ($registration_page_id) {
+            $register_page_url = get_permalink($registration_page_id);
+            echo '<p class="woocommerce-info register-link-container">';
+            echo sprintf(
+                __('Novo por aqui? <a href="%s" class="button alt register-button">Crie uma conta</a>', 'woocommerce'),
+                esc_url($register_page_url)
+            );
+            echo '</p>';
+            echo '<style>
+                .register-link-container {
+                    text-align: center;
+                    background-color: #f7f7f7; /* Fundo leve para destacar */
+                    padding: 20px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 10px;
+                    margin-bottom: 20px;
+                }
+
+                /* Estilo do botão */
+                .register-link-container .register-button {
+                    background-color: #007cba; /* Cor de destaque */
+                    color: #fff; /* Texto branco */
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    text-transform: uppercase;
+                    font-weight: bold;
+                    text-decoration: none;
+                    transition: background-color 0.3s ease;
+                }
+
+                .register-link-container .register-button:hover {
+                    background-color: #005a9e; /* Cor mais escura ao passar o mouse */
+                }
+
+                .woocommerce-info{
+                    display: flex;
+                    flex-direction: column;
+                    align-content: center;
+                    justify-content: space-around;
+                    align-items: center;
+                }
+
+                .woocommerce-error::before,
+                .woocommerce-info::before,
+                .woocommerce-message::before {
+                    content: none !important; /* Remove o ícone */
+                }
+
+            </style>';
+        }
+    }
+}
+add_action('woocommerce_before_customer_login_form', 'add_register_link_to_my_account');
