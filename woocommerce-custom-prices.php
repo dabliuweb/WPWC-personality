@@ -2,12 +2,10 @@
 /**
  * Plugin Name: WooCommerce Custom Prices
  * Description: Opções de personalizações para Woocommerce.
- * Version: 1.2.5
+ * Version: 1.2.10
  * Author: Douglas Lelis
  * Text Domain: woocommerce-custom-prices
  */
-
-
 
 
 // Adicionar menu no painel de administração
@@ -161,54 +159,70 @@ function wc_custom_prices_general_settings() {
 }
 
 function wc_custom_prices_fields_settings() {
-    // Verifica se o WordPress está carregado antes de executar a função
-    if (!function_exists('update_option')) {
-        return;
-    }
-
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wc_custom_prices_fields_nonce']) && wp_verify_nonce($_POST['wc_custom_prices_fields_nonce'], 'wc_custom_prices_fields')) {
-        // Verifica se a chave custom_fields é um array antes de manipular
+        $required_fields = isset($_POST['required_fields']) ? array_map('sanitize_text_field', $_POST['required_fields']) : [];
+        $custom_fields_saved = false;
+    
+        // Salvar campos obrigatórios
+        update_option('wc_custom_prices_required_fields', $required_fields);
+    
         if (isset($_POST['custom_fields']) && is_array($_POST['custom_fields'])) {
-            $custom_fields = array_map(function ($field) {
-                return [
-                    'name' => sanitize_text_field($field['name']),
-                    'required' => isset($field['required']) ? (bool) $field['required'] : false,
-                ];
-            }, $_POST['custom_fields']);
-        } else {
-            // Se não for um array, podemos tratar como um array simples, com apenas o nome do campo
-            $custom_fields = array_map(function ($field) {
-                return [
-                    'name' => sanitize_text_field($field),
-                    'required' => false,  // Defina como falso por padrão, pois não existe o checkbox
-                ];
-            }, $_POST['custom_fields']);
+            $custom_fields = [];
+            foreach ($_POST['custom_fields'] as $index => $field) {
+                if (is_array($field)) {
+                    $custom_fields[$index] = [
+                        'name' => sanitize_text_field($field['name']),
+                        'required' => isset($field['required']) ? (bool) $field['required'] : false,
+                    ];
+                }
+            }
+            // Atualiza os campos personalizados no banco de dados
+            update_option('wc_custom_prices_custom_fields', $custom_fields);
+            $custom_fields_saved = true;
         }
-
-        // Atualiza as opções no banco de dados
-        update_option('wc_custom_prices_custom_fields', $custom_fields);
-        echo '<div class="updated"><p>' . __('Configurações salvas!', 'woocommerce-custom-prices') . '</p></div>';
+    
+        // Exibe a mensagem de sucesso para as configurações salvas
+        if ($custom_fields_saved || isset($_POST['required_fields'])) {
+            echo '<div class="updated"><p>' . __('Configurações salvas!', 'woocommerce-custom-prices') . '</p></div>';
+        }
+    
+        // Exibe mensagem de erro caso não tenha enviado campos personalizados
+        if (!isset($_POST['custom_fields'])) {
+            echo '<div class="error"><p>' . __('Erro: Nenhum campo personalizado foi enviado.', 'woocommerce-custom-prices') . '</p></div>';
+        }
     }
 
-    // Obter campos personalizados armazenados
+    $required_fields = get_option('wc_custom_prices_required_fields', []);
     $custom_fields = get_option('wc_custom_prices_custom_fields', []);
     ?>
-    <h2><?php esc_html_e('Campos Personalizados', 'woocommerce-custom-prices'); ?></h2>
-    <p><?php esc_html_e('Adicione novos campos personalizados para o cadastro.', 'woocommerce-custom-prices'); ?></p>
+    <h2><?php esc_html_e('Campos Obrigatórios', 'woocommerce-custom-prices'); ?></h2>
+    <p><?php esc_html_e('Selecione os campos obrigatórios para o cadastro de clientes.', 'woocommerce-custom-prices'); ?></p>
+    <ul>
+        <?php foreach (['first_name', 'last_name', 'company', 'address_1', 'city', 'state', 'postcode', 'phone', 'email'] as $field) : ?>
+            <li>
+                <label>
+                    <input type="checkbox" name="required_fields[]" value="<?php echo esc_attr($field); ?>" <?php checked(in_array($field, $required_fields)); ?> />
+                    <?php echo esc_html($field); ?>
+                </label>
+            </li>
+        <?php endforeach; ?>
+    </ul>
 
-    <div id="custom-fields-container">
+    <h2><?php esc_html_e('Campos Personalizados', 'woocommerce-custom-prices'); ?></h2>
+
+    <button type="button" id="add-field" class="button button-primary"><?php esc_html_e('Adicionar Campo', 'woocommerce-custom-prices'); ?></button>
+
+    <p class="description"><?php esc_html_e('Adicione campos personalizados, marque como obrigatório se necessário.', 'woocommerce-custom-prices'); ?></p>
+
+    <div id="custom-fields-container" style="margin-top:20px;">
         <?php foreach ($custom_fields as $index => $field) : ?>
             <div class="custom-field">
                 <input type="text" name="custom_fields[<?php echo $index; ?>][name]" value="<?php echo esc_attr($field['name']); ?>" placeholder="Nome do Campo">
                 <input type="checkbox" name="custom_fields[<?php echo $index; ?>][required]" <?php checked($field['required'], true); ?> /> <?php esc_html_e('Obrigatório', 'woocommerce-custom-prices'); ?>
-                <button type="button" class="remove-field">Remover</button>
+                <button type="button" class="remove-field button button-secondary">Remover</button>
             </div>
         <?php endforeach; ?>
     </div>
-
-    <button type="button" id="add-field"><?php esc_html_e('Adicionar Campo', 'woocommerce-custom-prices'); ?></button>
-
-    <p class="description"><?php esc_html_e('Adicione campos personalizados, marque como obrigatório se necessário.', 'woocommerce-custom-prices'); ?></p>
 
     <?php wp_nonce_field('wc_custom_prices_fields', 'wc_custom_prices_fields_nonce'); ?>
     <?php submit_button(); ?>
@@ -222,7 +236,7 @@ function wc_custom_prices_fields_settings() {
             newField.innerHTML = `
                 <input type="text" name="custom_fields[${newIndex}][name]" placeholder="Nome do Campo">
                 <input type="checkbox" name="custom_fields[${newIndex}][required]" /> <?php esc_html_e('Obrigatório', 'woocommerce-custom-prices'); ?>
-                <button type="button" class="remove-field">Remover</button>
+                <button type="button" class="remove-field button button-secondary">Remover</button>
             `;
             container.appendChild(newField);
 
@@ -240,5 +254,7 @@ function wc_custom_prices_fields_settings() {
             });
         });
     </script>
+
+    
     <?php
 }
