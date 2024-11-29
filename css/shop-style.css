@@ -1,0 +1,162 @@
+.category-item{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background: #ededed;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+.category-item:hover, .category-item:hover a{
+    background: #283865;
+    color: #FFFFFF !important;
+    transition: all .3s ease;
+}
+.w-100{
+    width: 100% !important;
+}
+.product-categories .active, subproduct-categories .active{
+    background: #7387bd !important;
+}
+
+.product-categories .active a, subproduct-categories .active a{
+    color: #FFFFFF !important;
+}
+
+.subproduct-categories{
+    display: none;
+}
+.show{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+.subcategory-item{
+    list-style: none;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background: #ededed;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+.product-categories {
+    list-style: none;
+    padding: 0;
+}
+.product-categories li {
+    margin: 10px 0;
+}
+.subcategory-list {
+    margin-left: 20px;
+    list-style: none;
+}
+.category-item a, .subcategory-item a{
+    color: #000 !important;
+}
+
+
+/* Contêiner Geral */
+.filter-container {
+  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  font-family: Arial, sans-serif;
+  justify-content: space-around;
+  margin-bottom: 10px;
+  font-family: 'Montserrat';
+}
+
+/* Grupo de Filtro */
+.filter-group {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.filter-group label {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 0;
+}
+
+/* Botão Estilizado */
+.filter-button {
+  background: none;
+  border: none;
+  
+  font-size: 14px;
+  color: #0073aa;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: left;
+  padding: 5px;
+  transition: color 0.3s;
+}
+
+.filter-button:hover {
+  color: #005880;
+}
+
+/* Popover */
+.popover {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  width: max-content;
+  padding: 10px;
+}
+
+.popover ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.popover li {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: background 0.3s, color 0.3s;
+}
+
+.popover li:hover {
+  background: #f0f0f0;
+}
+
+.popover li.active {
+  font-weight: bold;
+  color: #0073aa;
+}
+
+/* Exibir Popover */
+.filter-group.open .popover {
+  display: block;
+}
+
+/* card  */
+.card{
+    padding: 2rem;
+    border: 1px solid rgba(0, 0, 0, 0.175);
+    border-radius: 10px;
+    margin-bottom: 2rem;
+}
+
+.card-content h2{
+    margin-top: 0 !important;
+
+}
+
+.card-img{
+    padding: 3rem 1rem;
+}

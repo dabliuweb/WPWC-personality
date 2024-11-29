@@ -392,3 +392,63 @@ function add_register_link_to_my_account() {
     }
 }
 add_action('woocommerce_before_customer_login_form', 'add_register_link_to_my_account');
+
+
+// Adiciona o campo de vídeo ao formulário de criação de categorias do WooCommerce
+add_action('product_cat_add_form_fields', 'add_video_field_to_woocommerce_category');
+function add_video_field_to_woocommerce_category() {
+    ?>
+    <div class="form-field">
+        <label for="product_cat_video">Vídeo</label>
+        <input type="hidden" name="product_cat_video" id="product-cat-video" value="">
+        <div id="product-cat-video-preview" style="margin-bottom: 10px;"></div>
+        <button type="button" class="button" id="upload-video-button">Selecionar Vídeo</button>
+        <button type="button" class="button button-secondary" id="remove-video-button" style="display:none;">Remover Vídeo</button>
+        <p class="description">Ou insira uma URL de vídeo (YouTube, Vimeo, etc.):</p>
+        <input type="text" name="product_cat_video_url" id="product-cat-video-url" value="" placeholder="https://">
+    </div>
+    <?php
+}
+
+// Adiciona o campo de vídeo ao formulário de edição de categorias do WooCommerce
+add_action('product_cat_edit_form_fields', 'edit_video_field_in_woocommerce_category');
+function edit_video_field_in_woocommerce_category($term) {
+    $video_url = get_term_meta($term->term_id, 'product_cat_video', true);
+    ?>
+    <tr class="form-field">
+        <th scope="row"><label for="product_cat_video">Vídeo</label></th>
+        <td>
+            <input type="hidden" name="product_cat_video" id="product-cat-video" value="<?php echo esc_url($video_url); ?>">
+            <div id="product-cat-video-preview" style="margin-bottom: 10px;">
+                <?php if ($video_url): ?>
+                    <video src="<?php echo esc_url($video_url); ?>" controls style="max-width: 100%;"></video>
+                <?php endif; ?>
+            </div>
+            <button type="button" class="button" id="upload-video-button">Selecionar Vídeo</button>
+            <button type="button" class="button button-secondary" id="remove-video-button" style="<?php echo $video_url ? '' : 'display:none;'; ?>">Remover Vídeo</button>
+            <p class="description">Ou insira uma URL de vídeo (YouTube, Vimeo, etc.):</p>
+            <input type="text" name="product_cat_video_url" id="product-cat-video-url" value="<?php echo esc_url($video_url); ?>" placeholder="https://">
+        </td>
+    </tr>
+    <?php
+}
+
+// Salva o campo de vídeo no banco de dados
+add_action('created_product_cat', 'save_video_field_for_woocommerce_category');
+add_action('edited_product_cat', 'save_video_field_for_woocommerce_category');
+function save_video_field_for_woocommerce_category($term_id) {
+    if (isset($_POST['product_cat_video_url']) && !empty($_POST['product_cat_video_url'])) {
+        // Prioriza a URL inserida manualmente
+        update_term_meta($term_id, 'product_cat_video', esc_url_raw($_POST['product_cat_video_url']));
+    } elseif (isset($_POST['product_cat_video'])) {
+        // Salva o vídeo selecionado pelo media uploader
+        update_term_meta($term_id, 'product_cat_video', esc_url_raw($_POST['product_cat_video']));
+    }
+}
+
+// Enfileira o Media Uploader do WordPress
+add_action('admin_enqueue_scripts', 'enqueue_media_uploader');
+function enqueue_media_uploader() {
+    wp_enqueue_media();
+    wp_enqueue_script('custom-category-video-script', plugin_dir_url(__FILE__) . 'js/custom-category-video.js', array('jquery'), null, true);
+}
